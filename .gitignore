@@ -1,2 +1,4 @@
 *.pcap
 archive/
+__pycache__/
+flow_predictions.csv
