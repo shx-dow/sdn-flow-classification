@@ -66,6 +66,23 @@ This creates:
 python predict_flow.py --input flow_dataset_training_windowed.csv --output flow_predictions.csv
 ```
 
+## Evaluation Metrics
+
+Generate evaluation metrics:
+
+```bash
+python evaluate_model.py
+```
+
+Current results:
+
+```text
+Windowed holdout accuracy: 0.9457
+Whole-flow generalization accuracy: 0.6316
+```
+
+The windowed score validates the demo pipeline. The whole-flow score is a harder check because the model was trained on 1-second samples but tested on complete flow records.
+
 ## POX Live Demo
 
 Copy these files into the POX `ext/` folder:
