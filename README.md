@@ -128,7 +128,3 @@ This is suitable for demo and initial testing.
 - The dataset is suitable for a prototype demo, not a large-scale production model.
 - More varied Mininet traffic would improve generalization.
 - OpenFlow stats do not expose packet-level minimum and maximum packet sizes, so the POX controller approximates them using average packet size.
-
-## Capstone Status
-
-The project is demo-ready: it can train a model and classify live Mininet traffic through POX as elephant or mice flows.
