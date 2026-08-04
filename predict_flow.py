@@ -4,7 +4,14 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 
 
 def load_feature_columns(metadata_path):
@@ -35,7 +42,10 @@ def print_evaluation(data, predictions, label_column):
         return
 
     labels = sorted(data[label_column].dropna().unique())
+    print(f"Precision: {precision_score(data[label_column], predictions, average='weighted', zero_division=0):.4f}")
+    print(f"Recall: {recall_score(data[label_column], predictions, average='weighted', zero_division=0):.4f}")
     print(f"Accuracy: {accuracy_score(data[label_column], predictions):.4f}")
+    print(f"F1 score: {f1_score(data[label_column], predictions, average='weighted', zero_division=0):.4f}")
     print("\nClassification report:")
     print(classification_report(data[label_column], predictions, labels=labels))
     print("Confusion matrix:")

@@ -74,11 +74,22 @@ Generate evaluation metrics:
 python evaluate_model.py
 ```
 
+This also writes the metrics to `evaluation_metrics.json`.
+
 Current results:
 
 ```text
-Windowed holdout accuracy: 0.9457
-Whole-flow generalization accuracy: 0.6316
+Windowed holdout evaluation:
+Precision: 1.0000
+Recall: 1.0000
+Accuracy: 1.0000
+F1 score: 1.0000
+
+Whole-flow generalization check:
+Precision: 0.7833
+Recall: 0.6316
+Accuracy: 0.6316
+F1 score: 0.5621
 ```
 
 The windowed score validates the demo pipeline. The whole-flow score is a harder check because the model was trained on 1-second samples but tested on complete flow records.

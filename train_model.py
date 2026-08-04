@@ -5,7 +5,14 @@ from pathlib import Path
 import joblib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import train_test_split
 
 
@@ -32,6 +39,13 @@ def load_dataset(path):
     dataset[FEATURE_COLUMNS] = dataset[FEATURE_COLUMNS].apply(pd.to_numeric, errors="coerce")
     dataset = dataset.dropna(subset=FEATURE_COLUMNS)
     return dataset
+
+
+def print_metrics(y_true, y_pred):
+    print(f"Precision: {precision_score(y_true, y_pred, average='weighted', zero_division=0):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred, average='weighted', zero_division=0):.4f}")
+    print(f"Accuracy: {accuracy_score(y_true, y_pred):.4f}")
+    print(f"F1 score: {f1_score(y_true, y_pred, average='weighted', zero_division=0):.4f}")
 
 
 def train_model(dataset, random_state):
@@ -100,7 +114,7 @@ def main():
     print(dataset["flow_label"].value_counts().to_string())
     print(f"Train rows: {len(x_train)}")
     print(f"Test rows: {len(x_test)}")
-    print(f"Accuracy: {accuracy_score(y_test, predictions):.4f}")
+    print_metrics(y_test, predictions)
     print("\nClassification report:")
     print(classification_report(y_test, predictions, labels=labels))
     print("Confusion matrix:")
