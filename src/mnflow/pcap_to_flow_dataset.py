@@ -1,9 +1,10 @@
 import argparse
 import csv
-from collections import defaultdict
 from pathlib import Path
 
 from scapy.all import ICMP, IP, TCP, UDP, PcapReader
+
+from .features import BYTE_THRESHOLD, DURATION_THRESHOLD, PACKET_THRESHOLD
 
 
 def packet_ports(packet):
@@ -161,11 +162,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Create an elephant/mice flow dataset directly from a pcap file."
     )
-    parser.add_argument("--input", default="traffic.pcap", help="Input pcap file")
-    parser.add_argument("--output", default="flow_dataset_training.csv", help="Output CSV")
-    parser.add_argument("--byte-threshold", type=int, default=1_000_000)
-    parser.add_argument("--duration-threshold", type=float, default=10.0)
-    parser.add_argument("--packet-threshold", type=int, default=1000)
+    parser.add_argument("--input", default="data/raw/traffic.pcap", help="Input pcap file")
+    parser.add_argument("--output", default="data/flow_dataset_training.csv", help="Output CSV")
+    parser.add_argument("--byte-threshold", type=int, default=BYTE_THRESHOLD)
+    parser.add_argument("--duration-threshold", type=float, default=DURATION_THRESHOLD)
+    parser.add_argument("--packet-threshold", type=int, default=PACKET_THRESHOLD)
     parser.add_argument("--progress-interval", type=int, default=100_000)
     parser.add_argument(
         "--window-seconds",

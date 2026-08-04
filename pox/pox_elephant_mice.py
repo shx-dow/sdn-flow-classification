@@ -1,14 +1,11 @@
-from __future__ import print_function
-
 import json
 import os
 import time
 
-from pox.core import core
 import pox.openflow.libopenflow_01 as of
+from pox.core import core
 from pox.lib.recoco import Timer
 from pox.lib.util import dpid_to_str
-
 
 log = core.getLogger()
 
@@ -25,7 +22,7 @@ DEFAULT_FEATURE_COLUMNS = [
 ]
 
 
-class ElephantMiceController(object):
+class ElephantMiceController:
     def __init__(self, model_path, metadata_path, poll_interval):
         self.model_path = model_path
         self.metadata_path = metadata_path
@@ -124,11 +121,7 @@ class ElephantMiceController(object):
             self._log_prediction(event, stat, features, prediction)
 
     def _skip_stat(self, stat):
-        if stat.packet_count <= 0:
-            return True
-        if getattr(stat.match, "dl_type", None) != 0x800:
-            return True
-        return False
+        return stat.packet_count <= 0 or getattr(stat.match, "dl_type", None) != 0x800
 
     def _stat_key(self, dpid, stat):
         match = stat.match

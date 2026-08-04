@@ -13,6 +13,8 @@ from sklearn.metrics import (
     recall_score,
 )
 
+from .features import LABEL_COLUMN
+
 
 def load_feature_columns(metadata_path):
     metadata = json.loads(Path(metadata_path).read_text())
@@ -57,11 +59,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Predict elephant/mice labels for flow feature rows."
     )
-    parser.add_argument("--input", default="flow_dataset_training_windowed.csv")
-    parser.add_argument("--model", default="elephant_mice_model.pkl")
-    parser.add_argument("--metadata", default="model_metadata.json")
-    parser.add_argument("--output", default="flow_predictions.csv")
-    parser.add_argument("--label-column", default="flow_label")
+    parser.add_argument("--input", default="data/flow_dataset_training_windowed.csv")
+    parser.add_argument("--model", default="models/elephant_mice_model.pkl")
+    parser.add_argument("--metadata", default="models/model_metadata.json")
+    parser.add_argument("--output", default="data/predictions/flow_predictions.csv")
+    parser.add_argument("--label-column", default=LABEL_COLUMN)
     args = parser.parse_args()
 
     feature_columns = load_feature_columns(args.metadata)

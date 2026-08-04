@@ -15,27 +15,16 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-
-FEATURE_COLUMNS = [
-    "protocol",
-    "total_packets",
-    "total_bytes",
-    "flow_duration",
-    "packet_rate",
-    "byte_rate",
-    "avg_packet_size",
-    "min_packet_size",
-    "max_packet_size",
-]
+from .features import FEATURE_COLUMNS, LABEL_COLUMN
 
 
 def load_dataset(path):
     dataset = pd.read_csv(path)
-    missing = set(FEATURE_COLUMNS + ["flow_label"]) - set(dataset.columns)
+    missing = set(FEATURE_COLUMNS + [LABEL_COLUMN]) - set(dataset.columns)
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(sorted(missing))}")
 
-    dataset = dataset.dropna(subset=FEATURE_COLUMNS + ["flow_label"]).copy()
+    dataset = dataset.dropna(subset=FEATURE_COLUMNS + [LABEL_COLUMN]).copy()
     dataset[FEATURE_COLUMNS] = dataset[FEATURE_COLUMNS].apply(pd.to_numeric, errors="coerce")
     dataset = dataset.dropna(subset=FEATURE_COLUMNS)
     return dataset
@@ -50,7 +39,7 @@ def print_metrics(y_true, y_pred):
 
 def train_model(dataset, random_state):
     x = dataset[FEATURE_COLUMNS]
-    y = dataset["flow_label"]
+    y = dataset[LABEL_COLUMN]
 
     x_train, x_test, y_train, y_test = train_test_split(
         x,
@@ -80,8 +69,8 @@ def save_metadata(path, dataset, model):
     }
     metadata = {
         "feature_columns": FEATURE_COLUMNS,
-        "label_column": "flow_label",
-        "class_counts": dataset["flow_label"].value_counts().to_dict(),
+        "label_column": LABEL_COLUMN,
+        "class_counts": dataset[LABEL_COLUMN].value_counts().to_dict(),
         "model_type": "RandomForestClassifier",
         "feature_importances": dict(
             sorted(importances.items(), key=lambda item: item[1], reverse=True)
@@ -94,24 +83,24 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train a Random Forest model for elephant/mice flow classification."
     )
-    parser.add_argument("--input", default="flow_dataset_training_windowed.csv")
-    parser.add_argument("--model-output", default="elephant_mice_model.pkl")
-    parser.add_argument("--metadata-output", default="model_metadata.json")
+    parser.add_argument("--input", default="data/flow_dataset_training_windowed.csv")
+    parser.add_argument("--model-output", default="models/elephant_mice_model.pkl")
+    parser.add_argument("--metadata-output", default="models/model_metadata.json")
     parser.add_argument("--random-state", type=int, default=42)
     args = parser.parse_args()
 
     dataset = load_dataset(Path(args.input))
-    model, x_train, x_test, y_train, y_test, predictions = train_model(
+    model, x_train, x_test, _y_train, y_test, predictions = train_model(
         dataset, args.random_state
     )
 
     joblib.dump(model, args.model_output)
     save_metadata(Path(args.metadata_output), dataset, model)
 
-    labels = sorted(dataset["flow_label"].unique())
+    labels = sorted(dataset[LABEL_COLUMN].unique())
     print(f"Dataset rows: {len(dataset)}")
     print("Class counts:")
-    print(dataset["flow_label"].value_counts().to_string())
+    print(dataset[LABEL_COLUMN].value_counts().to_string())
     print(f"Train rows: {len(x_train)}")
     print(f"Test rows: {len(x_test)}")
     print_metrics(y_test, predictions)

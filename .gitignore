@@ -1,5 +1,18 @@
-*.pcap
-archive/
+# Python
 __pycache__/
-flow_predictions.csv
-flow_predictions_whole.csv
+*.pyc
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+
+# Raw capture files and regenerable outputs
+*.pcap
+data/raw/
+data/predictions/
+data/evaluation_metrics.json

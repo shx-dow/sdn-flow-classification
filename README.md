@@ -13,68 +13,91 @@ This project classifies SDN network flows as **elephant flows** or **mice flows*
 - Scikit-learn
 - Wireshark/tcpdump
 
+## Project Structure
+
+```text
+.
+├── data/
+│   ├── flow_dataset_training.csv        # whole-flow dataset (committed)
+│   ├── flow_dataset_training_windowed.csv  # 1-second windowed dataset (committed)
+│   ├── raw/                             # pcap captures (gitignored)
+│   ├── predictions/                     # prediction output (gitignored)
+│   └── evaluation_metrics.json          # generated metrics report (gitignored)
+├── models/
+│   ├── elephant_mice_model.pkl          # saved trained model
+│   └── model_metadata.json              # feature order and model metadata
+├── pox/
+│   └── pox_elephant_mice.py             # POX controller for live prediction
+├── src/mnflow/                          # pip-installable package
+│   ├── features.py                      # shared feature columns and thresholds
+│   ├── pcap_to_flow_dataset.py          # pcap -> flow-level dataset
+│   ├── train_model.py                   # train the Random Forest model
+│   ├── predict_flow.py                  # offline prediction on flow CSVs
+│   └── evaluate_model.py                # evaluation metrics
+└── tests/                               # pytest unit + integration tests
+```
+
+## Installation
+
+```bash
+python -m venv .venv
+.venv/Scripts/activate  # Windows
+# source .venv/bin/activate  # macOS/Linux
+
+python -m pip install -e ".[dev]"
+```
+
+This installs the `mnflow` package and its console commands.
+
 ## Workflow
 
-1. Capture Mininet traffic as a PCAP file.
-2. Convert packets into 5-tuple flow samples.
-3. Extract flow features.
-4. Label flows as `elephant` or `mice` using thresholds.
-5. Train a Random Forest classifier.
-6. Load the saved model inside POX.
-7. Classify live SDN flows from OpenFlow stats.
-
-## Important Files
-
-- `pcap_to_flow_dataset.py` - converts a PCAP into flow-level datasets.
-- `train_model.py` - trains the Random Forest model.
-- `predict_flow.py` - tests predictions from the saved model.
-- `pox_elephant_mice.py` - POX controller for live prediction.
-- `flow_dataset_training_windowed.csv` - demo training dataset.
-- `elephant_mice_model.pkl` - saved trained model.
-- `model_metadata.json` - feature order and model metadata.
-
-Raw PCAP files are ignored because they are large.
+1. Capture Mininet traffic as a PCAP file into `data/raw/`.
+2. Convert packets into flow samples with `mn-pcap-to-dataset`.
+3. Label flows as `elephant` or `mice` using thresholds.
+4. Train a Random Forest classifier with `mn-train`.
+5. Load the saved model inside POX.
+6. Classify live SDN flows from OpenFlow stats.
 
 ## Dataset Generation
 
 Generate a whole-flow dataset:
 
 ```bash
-python pcap_to_flow_dataset.py --input traffic.pcap --output flow_dataset_training.csv
+mn-pcap-to-dataset --input data/raw/traffic.pcap --output data/flow_dataset_training.csv
 ```
 
 Generate a 1-second windowed dataset for live-controller style training:
 
 ```bash
-python pcap_to_flow_dataset.py --input traffic.pcap --output flow_dataset_training_windowed.csv --window-seconds 1
+mn-pcap-to-dataset --input data/raw/traffic.pcap --output data/flow_dataset_training_windowed.csv --window-seconds 1
 ```
+
+The equivalent module invocations are `python -m mnflow.pcap_to_flow_dataset`, etc.
 
 ## Model Training
 
 ```bash
-python train_model.py --input flow_dataset_training_windowed.csv
+mn-train --input data/flow_dataset_training_windowed.csv
 ```
 
 This creates:
 
-- `elephant_mice_model.pkl`
-- `model_metadata.json`
+- `models/elephant_mice_model.pkl`
+- `models/model_metadata.json`
 
 ## Offline Prediction Test
 
 ```bash
-python predict_flow.py --input flow_dataset_training_windowed.csv --output flow_predictions.csv
+mn-predict --input data/flow_dataset_training_windowed.csv --output data/predictions/flow_predictions.csv
 ```
 
 ## Evaluation Metrics
 
-Generate evaluation metrics:
-
 ```bash
-python evaluate_model.py
+mn-evaluate
 ```
 
-This also writes the metrics to `evaluation_metrics.json`.
+This writes the metrics to `data/evaluation_metrics.json`.
 
 Current results:
 
@@ -98,9 +121,9 @@ The windowed score validates the demo pipeline. The whole-flow score is a harder
 
 Copy these files into the POX `ext/` folder:
 
-- `pox_elephant_mice.py`
-- `elephant_mice_model.pkl`
-- `model_metadata.json`
+- `pox/pox_elephant_mice.py`
+- `models/elephant_mice_model.pkl`
+- `models/model_metadata.json`
 
 Start POX:
 
@@ -138,6 +161,12 @@ prediction=mice
 prediction=elephant
 ```
 
+## Artifact Policy
+
+Committed: training datasets in `data/`, model artifacts in `models/`. Both are small and make the demo runnable out of the box.
+
+Gitignored (regenerable): pcap captures (`data/raw/`), prediction output (`data/predictions/`), and the metrics report (`data/evaluation_metrics.json`).
+
 ## Current Demo Dataset
 
 The current windowed dataset contains:
@@ -156,3 +185,12 @@ This is suitable for demo and initial testing.
 - The dataset is suitable for a prototype demo, not a large-scale production model.
 - More varied Mininet traffic would improve generalization.
 - OpenFlow stats do not expose packet-level minimum and maximum packet sizes, so the POX controller approximates them using average packet size.
+
+## Development
+
+Run tests and linting:
+
+```bash
+pytest
+ruff check .
+```

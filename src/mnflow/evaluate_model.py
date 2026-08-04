@@ -14,6 +14,8 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
+from .features import LABEL_COLUMN
+
 
 def load_features(metadata_path):
     metadata = json.loads(Path(metadata_path).read_text())
@@ -52,23 +54,23 @@ def evaluate(name, y_true, y_pred):
 
 def load_dataset(path, feature_columns):
     dataset = pd.read_csv(path)
-    required = set(feature_columns + ["flow_label"])
+    required = set(feature_columns + [LABEL_COLUMN])
     missing = required - set(dataset.columns)
     if missing:
         raise ValueError(f"{path} is missing columns: {', '.join(sorted(missing))}")
 
-    dataset = dataset.dropna(subset=feature_columns + ["flow_label"]).copy()
+    dataset = dataset.dropna(subset=feature_columns + [LABEL_COLUMN]).copy()
     dataset[feature_columns] = dataset[feature_columns].apply(pd.to_numeric, errors="coerce")
     return dataset.dropna(subset=feature_columns)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Generate model evaluation metrics.")
-    parser.add_argument("--model", default="elephant_mice_model.pkl")
-    parser.add_argument("--metadata", default="model_metadata.json")
-    parser.add_argument("--windowed-data", default="flow_dataset_training_windowed.csv")
-    parser.add_argument("--whole-flow-data", default="flow_dataset_training.csv")
-    parser.add_argument("--metrics-output", default="evaluation_metrics.json")
+    parser.add_argument("--model", default="models/elephant_mice_model.pkl")
+    parser.add_argument("--metadata", default="models/model_metadata.json")
+    parser.add_argument("--windowed-data", default="data/flow_dataset_training_windowed.csv")
+    parser.add_argument("--whole-flow-data", default="data/flow_dataset_training.csv")
+    parser.add_argument("--metrics-output", default="data/evaluation_metrics.json")
     parser.add_argument("--random-state", type=int, default=42)
     args = parser.parse_args()
 
@@ -80,29 +82,29 @@ def main():
         windowed,
         test_size=0.25,
         random_state=args.random_state,
-        stratify=windowed["flow_label"],
+        stratify=windowed[LABEL_COLUMN],
     )
     windowed_predictions = model.predict(test[feature_columns])
     windowed_metrics = evaluate(
-        "Windowed holdout evaluation", test["flow_label"], windowed_predictions
+        "Windowed holdout evaluation", test[LABEL_COLUMN], windowed_predictions
     )
 
     whole_flow = load_dataset(args.whole_flow_data, feature_columns)
     whole_flow_predictions = model.predict(whole_flow[feature_columns])
     whole_flow_metrics = evaluate(
         "Whole-flow generalization check",
-        whole_flow["flow_label"],
+        whole_flow[LABEL_COLUMN],
         whole_flow_predictions,
     )
 
     metrics_output = {
         "model": args.model,
         "windowed_holdout": {
-            "rows": int(len(test)),
+            "rows": len(test),
             **windowed_metrics,
         },
         "whole_flow_generalization": {
-            "rows": int(len(whole_flow)),
+            "rows": len(whole_flow),
             **whole_flow_metrics,
         },
     }
