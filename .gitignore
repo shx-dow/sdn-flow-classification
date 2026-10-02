@@ -16,3 +16,6 @@ dist/
 data/raw/
 data/predictions/
 data/evaluation_metrics.json
+
+# Local docs (generated plan pages)
+docs/

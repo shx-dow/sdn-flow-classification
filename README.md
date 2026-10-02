@@ -40,23 +40,36 @@ This project classifies SDN network flows as **elephant flows** or **mice flows*
 ## Installation
 
 ```bash
-python -m venv .venv
-.venv/Scripts/activate  # Windows
-# source .venv/bin/activate  # macOS/Linux
-
-python -m pip install -e ".[dev]"
+uv sync --extra dev
 ```
 
-This installs the `mnflow` package and its console commands.
+This creates `.venv/`, installs the `mnflow` package with its console commands, and writes `uv.lock`. Run everything through uv:
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run mn-train --help
+```
 
 ## Workflow
 
-1. Capture Mininet traffic as a PCAP file into `data/raw/`.
-2. Convert packets into flow samples with `mn-pcap-to-dataset`.
-3. Label flows as `elephant` or `mice` using thresholds.
-4. Train a Random Forest classifier with `mn-train`.
-5. Load the saved model inside POX.
-6. Classify live SDN flows from OpenFlow stats.
+1. Capture Mininet traffic as a PCAP file into `data/raw/` (see `tools/`).
+2. Convert packets into flow samples with `mn-pcap-to-dataset` (traffic + security features, `flow_label` + `risk_label`).
+3. Train the traffic classifier with `mn-train` and the risk classifier with `mn-train-security`.
+4. Load both models inside POX.
+5. Classify live SDN flows from OpenFlow stats and enforce policy (`mn-report`).
+
+## Traffic Capture (Mininet VM)
+
+Sync the repo to the VM, then run one scenario per pcap:
+
+```bash
+sudo bash tools/gen_benign.sh data/raw/benign.pcap
+sudo bash tools/gen_scan.sh data/raw/scan.pcap
+sudo bash tools/gen_flood.sh data/raw/flood.pcap
+```
+
+Copy the pcaps back to `data/raw/` on this machine for training.
 
 ## Dataset Generation
 
@@ -85,10 +98,39 @@ This creates:
 - `models/elephant_mice_model.pkl`
 - `models/model_metadata.json`
 
+Train the security (Low/Medium/High) classifier on the same dataset
+(requires the security feature columns and `risk_label`):
+
+```bash
+mn-train-security --input data/flow_dataset_training_windowed.csv
+```
+
+This creates:
+
+- `models/security_model.pkl`
+- `models/security_metadata.json`
+
 ## Offline Prediction Test
 
 ```bash
 mn-predict --input data/flow_dataset_training_windowed.csv --output data/predictions/flow_predictions.csv
+```
+
+Any model works here by pointing at its artifacts, e.g. security predictions:
+
+```bash
+mn-predict --input data/flow_dataset_training_windowed.csv --output data/predictions/risk_predictions.csv \
+  --model models/security_model.pkl --metadata models/security_metadata.json --label-column risk_label
+```
+
+## Flow Security Report
+
+Summarize enforcement outcomes as CLI tables from the POX audit log or a labeled flow CSV:
+
+```bash
+mn-report --audit flow_security_audit.jsonl
+mn-report --flows data/flow_dataset_training_windowed.csv
+mn-report --audit flow_security_audit.jsonl --mode live
 ```
 
 ## Evaluation Metrics
@@ -122,8 +164,11 @@ The windowed score validates the demo pipeline. The whole-flow score is a harder
 Copy these files into the POX `ext/` folder:
 
 - `pox/pox_elephant_mice.py`
+- `pox/flow_security_policy.py`
 - `models/elephant_mice_model.pkl`
 - `models/model_metadata.json`
+- `models/security_model.pkl`
+- `models/security_metadata.json`
 
 Start POX:
 
@@ -132,8 +177,13 @@ cd ~/pox
 python3 pox.py log.level --DEBUG openflow.of_01 --port=6633 pox_elephant_mice \
   --model_path=ext/elephant_mice_model.pkl \
   --metadata_path=ext/model_metadata.json \
+  --security_model_path=ext/security_model.pkl \
+  --security_metadata_path=ext/security_metadata.json \
   --poll_interval=1
 ```
+
+Without the security model files the controller still runs: traffic uses the
+threshold fallback and every flow is graded by the risk heuristic.
 
 Start Mininet in another terminal:
 
